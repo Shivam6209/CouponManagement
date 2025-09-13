@@ -496,6 +496,28 @@ curl -X POST http://localhost:8080/api/applyCoupon/1 \
 - API documentation with Swagger
 - Containerization with Docker
 
+### **Limitations & Assumptions**
+
+#### **Current Limitations**
+1. **No User Management**: System doesn't track individual users
+2. **No Time Constraints**: Coupons don't have expiration dates
+3. **No Usage Limits**: No per-user or global usage restrictions
+4. **No Coupon Combinations**: Only one coupon per cart
+7. **No Security Features**: No authentication or rate limiting
+
+#### **Assumptions Made**
+1. **Single Coupon Per Cart**: Only one coupon can be applied at a time
+2. **Immediate Application**: Coupons are applied immediately when requested
+3. **No User Context**: System doesn't need user identification
+4. **Simple Business Rules**: Basic validation rules are sufficient
+5. **Synchronous Processing**: All operations are synchronous
+
+### 🚀 **Future Roadmap**
+1. **Phase 1**: Add user management and authentication
+2. **Phase 2**: Implement coupon expiration and usage limits
+3. **Phase 3**: Add advanced BxGy scenarios and combination rules
+5. **Phase 4**: Add security features
+
 ## 👥 Authors
 
 - **Developer**: Shivam Jha
