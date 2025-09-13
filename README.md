@@ -36,7 +36,6 @@ A robust, production-ready RESTful API for managing discount coupons in e-commer
 - **MySQL 8.0.33** - Primary database
 - **H2 Database** - Testing database
 - **Jakarta Validation** - Input validation
-- **Jackson** - JSON processing
 - **Maven** - Dependency management
 
 ### Testing
@@ -75,20 +74,13 @@ src/main/java/com/couponManagement/
 ```
 
 ### Entity Structure
-- **Coupon**: Main entity with Long primary key
+- **Coupon**: Coupon Details
 - **CartWiseCoupon**: Cart-wise discount details
 - **ProductWiseCoupon**: Product-specific discount details
 - **BxGyCoupon**: Buy X Get Y discount details
 - **Product**: Product entity for BxGy validation
 
-## 📚 API Documentation
-
-### Base URL
-```
-http://localhost:8080/api
-```
-
-### Coupon Management Endpoints (camelCase)
+### Coupon Management Endpoints
 
 #### 1. Create Coupon
 ```http
@@ -341,13 +333,6 @@ mvn spring-boot:run
 mvn test
 # Tests automatically use H2 database
 ```
-
-### Production Mode
-```bash
-mvn clean package
-java -jar target/demo-0.0.1-SNAPSHOT.jar
-```
-
 ### Verify Application
 ```bash
 # Check if application started
@@ -450,8 +435,6 @@ curl -X POST http://localhost:8080/api/applyCoupon/1 \
 - `200` - Success
 - `201` - Created
 - `400` - Bad Request (validation errors)
-- `404` - Not Found (coupon not found)
-- `409` - Conflict (coupon already exists)
 - `500` - Internal Server Error
 
 ### Error Response Format
@@ -522,4 +505,3 @@ curl -X POST http://localhost:8080/api/applyCoupon/1 \
 
 - **Developer**: Shivam Jha
 - **Project**: Coupon Management System
-- **Version**: 1.0.0
