@@ -1,30 +1,31 @@
 # 🎯 Coupon Management System
 
-A robust RESTful API for managing discount coupons in e-commerce platforms. Supports cart-wise, product-wise, and BxGy (Buy X Get Y) coupon types with comprehensive validation and error handling.
+A robust, production-ready RESTful API for managing discount coupons in e-commerce platforms. Supports cart-wise, product-wise, and BxGy (Buy X Get Y) coupon types with comprehensive validation, error handling, and testing.
 
 ## ✨ Features
 
 ### 🎫 Coupon Types Supported
 - **Cart-wise**: Percentage discount on entire cart when total exceeds threshold
-- **Product-wise**: Discount on specific products
+- **Product-wise**: Fixed discount on specific products
 - **BxGy (Buy X Get Y)**: Complex deals with repetition limits
-  - Buy specified quantities from buy_products array
+  - Buy specified quantities from multiple products
   - Get free items from get_products array
   - Configurable repetition limits
   - User choice for which products get discounted
 
 ### 🔧 Core Functionality
 - Complete CRUD operations for coupons
-- Coupon validation and business rules
+- Coupon validation and business rules enforcement
 - Soft delete (deactivation) instead of hard delete
-- Comprehensive error handling
+- Comprehensive error handling with custom exceptions
 - Input validation with Jakarta Validation
-- Transaction management
+- Transaction management with Spring Data JPA
 
 ### 🛡️ Quality Assurance
-- Pure JUnit 5 unit tests
-- Comprehensive test coverage
-- Code quality with proper exception handling
+- Comprehensive JUnit 5 unit tests
+- Test coverage for all business logic
+- H2 in-memory database for testing
+- Proper exception handling and validation
 
 ## 🛠 Technology Stack
 
@@ -36,15 +37,13 @@ A robust RESTful API for managing discount coupons in e-commerce platforms. Supp
 - **H2 Database** - Testing database
 - **Jakarta Validation** - Input validation
 - **Jackson** - JSON processing
+- **Maven** - Dependency management
 
 ### Testing
 - **JUnit 5** - Unit testing framework
 - **Spring Boot Test** - Integration testing
-- **Pure Java assertions** - Standard JUnit assertions
-
-### Build & DevOps
-- **Maven** - Dependency management and build tool
-- **Spring Boot DevTools** - Development tools
+- **MockMvc** - Web layer testing
+- **H2 Database** - In-memory testing database
 
 ## 🏗 Architecture
 
@@ -53,7 +52,7 @@ A robust RESTful API for managing discount coupons in e-commerce platforms. Supp
 ┌─────────────────┐
 │   Controller    │  ← REST API endpoints
 ├─────────────────┤
-│    Service      │  ← Business logic
+│    Service      │  ← Business logic & validation
 ├─────────────────┤
 │   Repository    │  ← Data access layer
 ├─────────────────┤
@@ -67,13 +66,20 @@ A robust RESTful API for managing discount coupons in e-commerce platforms. Supp
 ```
 src/main/java/com/couponManagement/
 ├── controller/     # REST controllers
-├── service/        # Business logic
+├── service/        # Business logic & interfaces
 ├── repository/     # Data access layer
 ├── entity/         # JPA entities
 ├── dto/           # Data transfer objects
 ├── exception/     # Custom exceptions
 └── Application.java
 ```
+
+### Entity Structure
+- **Coupon**: Main entity with Long primary key
+- **CartWiseCoupon**: Cart-wise discount details
+- **ProductWiseCoupon**: Product-specific discount details
+- **BxGyCoupon**: Buy X Get Y discount details
+- **Product**: Product entity for BxGy validation
 
 ## 📚 API Documentation
 
@@ -82,18 +88,18 @@ src/main/java/com/couponManagement/
 http://localhost:8080/api
 ```
 
-### Coupon Management Endpoints
+### Coupon Management Endpoints (camelCase)
 
 #### 1. Create Coupon
 ```http
-POST /api/coupons
+POST /api/createCoupon
 ```
 
 **Request Body:**
 ```json
 {
-  "type": "cart_wise",
-  "details": {
+  "type": "CART_WISE",
+  "cartWiseDetails": {
     "threshold": 100.0,
     "discount": 10.0
   }
@@ -103,21 +109,26 @@ POST /api/coupons
 **Response:**
 ```json
 {
-  "id": "CPN1699123456789",
-  "type": "CART_WISE",
-  "details": {
-    "threshold": 100.0,
-    "discount": 10.0
-  },
-  "active": true,
-  "createdAt": "2025-09-12T01:57:36",
-  "updatedAt": "2025-09-12T01:57:36"
+  "code": 0,
+  "message": "Coupon created successfully",
+  "result": {
+    "id": 1,
+    "couponCode": "CPN1757788284014272",
+    "type": "CART_WISE",
+    "cartWiseDetails": {
+      "threshold": 100.0,
+      "discount": 10.0
+    },
+    "active": true,
+    "createdAt": "2025-09-14T00:01:20.895",
+    "updatedAt": "2025-09-14T00:01:20.895"
+  }
 }
 ```
 
 #### 2. Get All Coupons
 ```http
-GET /api/coupons
+GET /api/getAllCoupons
 ```
 
 #### 3. Get Active Coupons
@@ -132,17 +143,17 @@ GET /api/coupons/{id}
 
 #### 5. Update Coupon
 ```http
-PUT /api/coupons/{id}
+PUT /api/updateCoupon/{id}
 ```
 
 #### 6. Delete Coupon (Soft Delete)
 ```http
-DELETE /api/coupons/{id}
+DELETE /api/deleteCoupon/{id}
 ```
 
 #### 7. Get Applicable Coupons
 ```http
-POST /api/coupons/applicable-coupons
+POST /api/applicableCoupons
 ```
 
 **Request Body:**
@@ -151,8 +162,18 @@ POST /api/coupons/applicable-coupons
   "items": [
     {
       "productId": "PROD001",
+      "quantity": 6,
+      "price": 50.0
+    },
+    {
+      "productId": "PROD002", 
+      "quantity": 3,
+      "price": 30.0
+    },
+    {
+      "productId": "PROD003",
       "quantity": 2,
-      "price": 100.0
+      "price": 25.0
     }
   ]
 }
@@ -161,20 +182,30 @@ POST /api/coupons/applicable-coupons
 **Response:**
 ```json
 {
-  "applicableCoupons": [
-    {
-      "couponId": "CPN001",
-      "type": "CART_WISE",
-      "discount": 20.0,
-      "description": "10% off on orders over ₹200"
-    }
-  ]
+  "code": 0,
+  "message": "Applicable coupons retrieved successfully",
+  "result": {
+    "applicableCoupons": [
+      {
+        "couponId": 1,
+        "type": "CART_WISE",
+        "discount": 40.0,
+        "description": "10% off on orders over ₹100"
+      },
+      {
+        "couponId": 3,
+        "type": "BXGY",
+        "discount": 50.0,
+        "description": "Buy 6 of Product X or Y, Get 2 of Product Z Free"
+      }
+    ]
+  }
 }
 ```
 
 #### 8. Apply Coupon
 ```http
-POST /api/coupons/apply-coupon/{id}
+POST /api/applyCoupon/{id}
 ```
 
 **Request Body:**
@@ -183,8 +214,18 @@ POST /api/coupons/apply-coupon/{id}
   "items": [
     {
       "productId": "PROD001",
+      "quantity": 6,
+      "price": 50.0
+    },
+    {
+      "productId": "PROD002",
+      "quantity": 3,
+      "price": 30.0
+    },
+    {
+      "productId": "PROD003",
       "quantity": 2,
-      "price": 100.0
+      "price": 25.0
     }
   ]
 }
@@ -193,17 +234,36 @@ POST /api/coupons/apply-coupon/{id}
 **Response:**
 ```json
 {
-  "items": [
-    {
-      "productId": "PROD001",
-      "quantity": 2,
-      "price": 100.0,
-      "totalDiscount": 20.0
-    }
-  ],
-  "totalPrice": 200.0,
-  "totalDiscount": 20.0,
-  "finalPrice": 180.0
+  "code": 0,
+  "message": "Coupon applied successfully",
+  "result": {
+    "items": [
+      {
+        "productId": "PROD001",
+        "quantity": 6,
+        "price": 50.0,
+        "totalDiscount": 0.0,
+        "totalPrice": 300.0
+      },
+      {
+        "productId": "PROD002",
+        "quantity": 3,
+        "price": 30.0,
+        "totalDiscount": 0.0,
+        "totalPrice": 90.0
+      },
+      {
+        "productId": "PROD003",
+        "quantity": 4,
+        "price": 25.0,
+        "totalDiscount": 50.0,
+        "totalPrice": 50.0
+      }
+    ],
+    "totalPrice": 490.0,
+    "totalDiscount": 50.0,
+    "finalPrice": 440.0
+  }
 }
 ```
 
@@ -217,9 +277,8 @@ CREATE DATABASE coupon_management;
 -- Use the database
 USE coupon_management;
 
--- The application will automatically create tables using JPA
--- Table: coupons
--- Columns: id, coupon_code, coupon_type, details, is_active, created_at, updated_at
+-- Tables will be automatically created by JPA
+-- Main tables: coupons, cart_wise_coupons, product_wise_coupons, bxgy_coupons, products
 ```
 
 ### Application Properties
@@ -235,25 +294,15 @@ spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
 spring.jpa.properties.hibernate.format_sql=true
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect
+
+# Test Configuration (H2)
+spring.datasource.url=jdbc:h2:mem:testdb
+spring.datasource.driver-class-name=org.h2.Driver
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect
+spring.jpa.properties.hibernate.hbm2ddl.auto=create-drop
 ```
 
-### Configuration Strategy
-
-#### **Simple Configuration Approach:**
-- **`application.properties`
-- **`src/test/resources/application.properties`
-
-#### **Database Setup:**
-1. **Install MySQL** and create database:
-   ```sql
-   CREATE DATABASE coupon_management;
-   ```
-
-2. **Update credentials** in `application.properties` 
-
-3. **For testing:** H2 database is automatically used
-
-## 🚀 Installation
+## 🚀 Installation & Setup
 
 ### Prerequisites
 - Java 17 or higher
@@ -264,12 +313,7 @@ spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect
 ### Clone Repository
 ```bash
 git clone <repository-url>
-cd couponmanagement
-```
-
-### Build Project
-```bash
-mvn clean compile
+cd CouponManagement
 ```
 
 ### Database Setup
@@ -279,6 +323,11 @@ mvn clean compile
    CREATE DATABASE coupon_management;
    ```
 3. **Update credentials** in `application.properties` (default: root/password)
+
+### Build Project
+```bash
+mvn clean compile
+```
 
 ## ▶️ Running the Application
 
@@ -302,9 +351,9 @@ java -jar target/demo-0.0.1-SNAPSHOT.jar
 ### Verify Application
 ```bash
 # Check if application started
-curl http://localhost:8080/api/coupons
+curl http://localhost:8080/api/getAllCoupons
 
-# Should return empty array: []
+# Should return: {"code":0,"message":"Coupons retrieved successfully","result":[]}
 ```
 
 ## 🧪 Testing
@@ -316,57 +365,75 @@ mvn test
 
 ### Run Specific Test Class
 ```bash
+mvn test -Dtest=CouponControllerTest
 mvn test -Dtest=CouponServiceTest
 ```
 
 ### Test Coverage
-```bash
-mvn test jacoco:report
-```
-
-### Test Results
 The project includes comprehensive tests:
-- **CouponServiceTest**: Business logic testing
-- **JsonUtilTest**: Utility class testing
-- **CouponControllerTest**: REST endpoint testing
-
 ## 📝 Usage Examples
 
 ### 1. Create Cart-wise Coupon
 ```bash
-curl -X POST http://localhost:8080/api/coupons \
+curl -X POST http://localhost:8080/api/createCoupon \
   -H "Content-Type: application/json" \
   -d '{
-    "type": "cart_wise",
-    "details": {
+    "type": "CART_WISE",
+    "cartWiseDetails": {
       "threshold": 500.0,
       "discount": 10.0
     }
   }'
 ```
 
-### 2. Create BxGy Coupon
+### 2. Create Product-wise Coupon
 ```bash
-curl -X POST http://localhost:8080/api/coupons \
+curl -X POST http://localhost:8080/api/createCoupon \
   -H "Content-Type: application/json" \
   -d '{
-    "type": "bxgy",
-    "details": {
-      "buy_products": [
-        {"product_id": 1, "quantity": 3},
-        {"product_id": 2, "quantity": 3}
-      ],
-      "get_products": [
-        {"product_id": 3, "quantity": 1}
-      ],
-      "repition_limit": 2
+    "type": "PRODUCT_WISE",
+    "productWiseDetails": {
+      "productId": 1,
+      "discount": 20.0
     }
   }'
 ```
 
-### 3. Get Applicable Coupons
+### 3. Create BxGy Coupon
 ```bash
-curl -X POST http://localhost:8080/api/coupons/applicable-coupons \
+curl -X POST http://localhost:8080/api/createCoupon \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "BXGY",
+    "bxGyDetails": {
+      "buyProducts": [
+        {"productId": 1, "quantity": 3},
+        {"productId": 2, "quantity": 3}
+      ],
+      "getProducts": [
+        {"productId": 3, "quantity": 1}
+      ],
+      "repetitionLimit": 2
+    }
+  }'
+```
+
+### 4. Get Applicable Coupons
+```bash
+curl -X POST http://localhost:8080/api/applicableCoupons \
+  -H "Content-Type: application/json" \
+  -d '{
+    "items": [
+      {"productId": "PROD001", "quantity": 6, "price": 50.0},
+      {"productId": "PROD002", "quantity": 3, "price": 30.0},
+      {"productId": "PROD003", "quantity": 2, "price": 25.0}
+    ]
+  }'
+```
+
+### 5. Apply Coupon
+```bash
+curl -X POST http://localhost:8080/api/applyCoupon/1 \
   -H "Content-Type: application/json" \
   -d '{
     "items": [
@@ -390,9 +457,9 @@ curl -X POST http://localhost:8080/api/coupons/applicable-coupons \
 ### Error Response Format
 ```json
 {
-  "errorCode": "COUPON_NOT_FOUND",
-  "message": "Coupon not found with ID: CPN001",
-  "timestamp": "2025-09-12T01:57:36"
+  "code": -1,
+  "message": "Coupon not found with ID: 999",
+  "result": null
 }
 ```
 
@@ -400,6 +467,25 @@ curl -X POST http://localhost:8080/api/coupons/applicable-coupons \
 - `CouponNotFoundException` - When coupon doesn't exist
 - `CouponAlreadyExistsException` - When creating duplicate coupon
 - `InvalidCouponException` - When coupon data is invalid
+
+## 🔧 Business Logic Details
+
+### Cart-wise Coupons
+- Applied when cart total exceeds threshold
+- Discount calculated as percentage of cart total
+- Applied to entire cart
+
+### Product-wise Coupons
+- Applied to specific products only
+- Fixed discount amount per product
+- Only affects matching product IDs
+
+### BxGy Coupons
+- Complex "Buy X Get Y" logic
+- Supports multiple products in buy_products (OR condition)
+- User can choose which products get discounted
+- Repetition limit controls how many times offer can be applied
+- Calculates maximum possible discount based on cart contents
 
 ## 🔮 Future Enhancements
 
@@ -413,138 +499,5 @@ curl -X POST http://localhost:8080/api/coupons/applicable-coupons \
 ## 👥 Authors
 
 - **Developer**: Shivam Jha
-- **Project**: Coupon Management
-
-## **🛠 ECLIPSE IDE SETUP & USAGE**
-
-### **Import Project into Eclipse**
-
-#### **Method 1: Import as Maven Project**
-1. **Open Eclipse IDE**
-2. **File → Import → Maven → Existing Maven Projects**
-3. **Browse to your project folder:** `D:\Self\CouponManagement`
-4. **Select the `pom.xml` file**
-5. **Click Finish**
-
-### **Run Application in Eclipse**
-1. **Right-click on project → Run As → Maven build...**
-2. **Goals:** `spring-boot:run`
-3. **Click Run**
-
-### **Run Tests in Eclipse**
-1. **Right-click on project → Run As → Maven test**
-2. **Or right-click on specific test class → Run As → JUnit Test**
-
-### **Debug Application in Eclipse**
-1. **Right-click on `Application.java` → Debug As → Java Application**
-2. **Set breakpoints in your code**
-3. **Use Debug perspective for debugging**
-
----
-
-**Set base URL:** `http://localhost:8080/api`
-
-### **API Endpoints to Import**
-
-#### **1. Create Coupon**
-```
-Method: POST
-URL: http://localhost:8080/api/coupons
-Headers: Content-Type: application/json
-Body (raw JSON):
-{
-  "type": "cart_wise",
-  "details": {
-    "threshold": 500.0,
-    "discount": 10.0
-  }
-}
-```
-
-#### **2. Get All Coupons**
-```
-Method: GET
-URL: http://localhost:8080/api/coupons
-```
-
-#### **3. Get Active Coupons**
-```
-Method: GET
-URL: http://localhost:8080/api/coupons/active
-```
-
-#### **4. Get Coupon by ID**
-```
-Method: GET
-URL: http://localhost:8080/api/coupons/CPN001
-```
-
-#### **5. Update Coupon**
-```
-Method: PUT
-URL: http://localhost:8080/api/coupons/CPN001
-Headers: Content-Type: application/json
-Body (raw JSON):
-{
-  "type": "cart_wise",
-  "details": {
-    "threshold": 600.0,
-    "discount": 15.0
-  }
-}
-```
-
-#### **6. Delete Coupon**
-```
-Method: DELETE
-URL: http://localhost:8080/api/coupons/CPN001
-```
-
-#### **7. Get Applicable Coupons**
-```
-Method: POST
-URL: http://localhost:8080/api/coupons/applicable-coupons
-Headers: Content-Type: application/json
-Body (raw JSON):
-{
-  "items": [
-    {
-      "productId": "PROD001",
-      "quantity": 6,
-      "price": 50.0
-    },
-    {
-      "productId": "PROD002",
-      "quantity": 3,
-      "price": 30.0
-    },
-    {
-      "productId": "PROD003",
-      "quantity": 2,
-      "price": 25.0
-    }
-  ]
-}
-```
-
-#### **8. Apply Coupon**
-```
-Method: POST
-URL: http://localhost:8080/api/coupons/apply-coupon/CPN001
-Headers: Content-Type: application/json
-Body (raw JSON):
-{
-  "items": [
-    {
-      "productId": "PROD001",
-      "quantity": 6,
-      "price": 50.0
-    },
-    {
-      "productId": "PROD002",
-      "quantity": 3,
-      "price": 30.0
-    }
-  ]
-}
-```
+- **Project**: Coupon Management System
+- **Version**: 1.0.0
